@@ -116,7 +116,9 @@ int main(int argc, char** argv) {
         *(unsigned int*)sendbuf = htonl(hash);
       }
       
-      long count = sendto(sockfd, sendbuf, strlen(sendbuf), 0, (sockaddr*)&sin, sin_len);
+      size_t buf_len = strlen(sendbuf);
+      printf("[send data] %d (%zu)", map_offset + offset, buf_len);
+      long count = sendto(sockfd, sendbuf, buf_len, 0, (sockaddr*)&sin, sin_len);
       if (count < 0) {
         perror("error sending packet");
         return -1;
@@ -125,6 +127,7 @@ int main(int argc, char** argv) {
       count = recvfrom(sockfd, recvbuf, RECV_PACKET_SIZE, 0, (sockaddr*)&sin, &sin_len);
       if (count < 0) {
         if (errno == ETIMEDOUT) {
+          printf("[timeout error]");
           retransmit = true;
           continue;
         } else {
@@ -135,6 +138,7 @@ int main(int argc, char** argv) {
       
       /* check serial number */
       if (serial_no != ntohs(*(unsigned short*)recvbuf)) {
+        printf("[ACK packet error]");
         retransmit = true;
         continue;
       } else {
@@ -152,6 +156,9 @@ int main(int argc, char** argv) {
     map_size = (file_size - map_offset) > MAX_MAP_SIZE ? MAX_MAP_SIZE : file_size - map_offset;
   }
   
+  printf("[completed]");
+  delete sendbuf;
+  delete recvbuf;
   close(file);
   close(sockfd);
   return 0;
